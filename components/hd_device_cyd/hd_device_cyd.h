@@ -5,7 +5,7 @@
 #include "esphome/core/log.h"
 #include "LGFX.h"
 #include "lvgl.h"
-#include <CST816S.h>  // 替换为CST816专用库
+#include "CST816S.h"  // 替换为CST816专用库
 
 // 修改为CST816的I2C引脚定义
 #define TOUCH_SDA 21
