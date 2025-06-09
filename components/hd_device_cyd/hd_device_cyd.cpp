@@ -10,8 +10,10 @@ static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof
 int x = 0;
 int y = 0;
 
-SPIClass mySpi = SPIClass(VSPI);
-XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
+// 移除SPI相关代码
+// 添加I2C和CST816对象
+TwoWire touchWire = TwoWire(0); // 使用I2C0
+CST816S touch_; // 已在头文件中声明
 
 LGFX lcd;
 
@@ -34,16 +36,15 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
 
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-
-    if (ts.touched()) {
-        TS_Point p = ts.getPoint();
-        x = map(p.x, 220, 3850, 1, 320);
-        y = map(p.y, 310, 3773, 1, 240);
+    uint8_t gesture = touch_.getGesture();
+    
+    if (gesture != None) {
+        x = touch_.getX();
+        y = touch_.getY();
         data->point.x = x;
         data->point.y = y;
         data->state = LV_INDEV_STATE_PR;
-        ESP_LOGCONFIG(TAG, "X: %d ", x);
-        ESP_LOGCONFIG(TAG, "Y: %d ", y);
+        ESP_LOGCONFIG(TAG, "Touch detected - X: %d, Y: %d", x, y);
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
@@ -53,9 +54,16 @@ void HaDeckDevice::setup() {
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
-    mySpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
-    ts.begin(mySpi);
-    ts.setRotation(1);
+    // 初始化I2C总线
+    touchWire.begin(TOUCH_SDA, TOUCH_SCL, 400000); // 400kHz I2C速度
+    
+    // 初始化CST816触摸屏
+    if (!touch_.begin(touchWire, TOUCH_RST, TOUCH_INT)) {
+        ESP_LOGE(TAG, "CST816 touch initialization failed!");
+    } else {
+        ESP_LOGI(TAG, "CST816 touch initialized successfully");
+        touch_.setAutoSleep(false); // 禁用自动休眠
+    }
 
     lcd.init();
 
@@ -89,7 +97,6 @@ void HaDeckDevice::setup() {
     lv_obj_set_style_border_width(bg_color, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(bg_color, lv_color_hex(0x171717), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_parent(bg_color, lv_scr_act());
-
 }
 
 void HaDeckDevice::loop() {
