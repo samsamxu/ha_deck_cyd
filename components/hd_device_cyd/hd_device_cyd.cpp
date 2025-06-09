@@ -10,11 +10,7 @@ static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof
 int x = 0;
 int y = 0;
 
-// 移除SPI相关代码
-// 添加I2C和CST816对象
-TwoWire touchWire = TwoWire(0); // 使用I2C0
-CST816S touch_; // 已在头文件中声明
-
+// 移除 SPI 和触摸屏对象的直接声明
 LGFX lcd;
 
 lv_disp_t *indev_disp;
@@ -36,15 +32,12 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
 
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    uint8_t gesture = touch_.getGesture();
-    
-    if (gesture != None) {
-        x = touch_.getX();
-        y = touch_.getY();
-        data->point.x = x;
-        data->point.y = y;
+    // 使用 ESPHome 的触摸屏组件获取触摸数据
+    if (touchscreen::TouchPoint point = touchscreen::get_touch_point()) {
+        data->point.x = point.x;
+        data->point.y = point.y;
         data->state = LV_INDEV_STATE_PR;
-        ESP_LOGCONFIG(TAG, "Touch detected - X: %d, Y: %d", x, y);
+        ESP_LOGD(TAG, "Touch detected - X: %d, Y: %d", point.x, point.y);
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
@@ -54,17 +47,7 @@ void HaDeckDevice::setup() {
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
-    // 初始化I2C总线
-    touchWire.begin(TOUCH_SDA, TOUCH_SCL, 400000); // 400kHz I2C速度
-    
-    // 初始化CST816触摸屏
-    if (!touch_.begin(touchWire, TOUCH_RST, TOUCH_INT)) {
-        ESP_LOGE(TAG, "CST816 touch initialization failed!");
-    } else {
-        ESP_LOGI(TAG, "CST816 touch initialized successfully");
-        touch_.setAutoSleep(false); // 禁用自动休眠
-    }
-
+    // 初始化 LCD 显示
     lcd.init();
 
     lv_disp_draw_buf_init(&draw_buf, buf, NULL, TFT_HEIGHT * 20);
@@ -97,6 +80,9 @@ void HaDeckDevice::setup() {
     lv_obj_set_style_border_width(bg_color, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(bg_color, lv_color_hex(0x171717), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_parent(bg_color, lv_scr_act());
+
+    // 初始化触摸屏（在 YAML 中配置）
+    ESP_LOGI(TAG, "Touchscreen initialized via YAML configuration");
 }
 
 void HaDeckDevice::loop() {
