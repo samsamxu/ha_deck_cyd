@@ -15,6 +15,7 @@
 
 namespace esphome {
 namespace hd_device {
+namespace cst816s_touchscreen {
 
 class HaDeckDevice : public Component
 {
