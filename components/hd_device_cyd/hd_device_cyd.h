@@ -10,8 +10,8 @@
 // 修改为CST816的I2C引脚定义
 #define TOUCH_SDA 21
 #define TOUCH_SCL 22
-#define TOUCH_INT -1   // 中断引脚（如有需要）
-#define TOUCH_RST -1   // 复位引脚（如有需要）
+#define TOUCH_INT 36   // 中断引脚（如有需要）
+#define TOUCH_RST 33   // 复位引脚（如有需要）
 
 namespace esphome {
 namespace hd_device {
