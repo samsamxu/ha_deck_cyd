@@ -1,18 +1,20 @@
-#include "hd_device_cyd.h"
+#include "hd_device_ILI9341.h"
 
-// 定义全局设备指针
-HaDeckDevice *global_device = nullptr;
+namespace esphome {
+namespace hd_device {
 
+static const char *const TAG = "HD_DEVICE";
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
-
-int16_t x = 0;
-int16_t y = 0;
+static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 10 * sizeof(lv_color_t), MALLOC_CAP_DMA);
 
 LGFX lcd;
 
 lv_disp_t *indev_disp;
 lv_group_t *group;
+
+// Aggiorna le dimensioni del display per ILI9341
+static const uint16_t TFT_WIDTH = 320;
+static const uint16_t TFT_HEIGHT = 240;
 
 void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 {
@@ -28,67 +30,36 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
     lv_disp_flush_ready(disp);
 }
 
-// 修改触摸读取函数适配CST816
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    if (global_device) {
-        // 读取触摸数据
-        uint8_t gesture;
-        uint16_t touch_x, touch_y;
-        bool touched = global_device->touch_.read(&gesture, &touch_x, &touch_y);
-        
-        if (touched) {
-            // 坐标校准（根据实际屏幕方向调整）
-            #if TOUCH_ROTATION == 90
-                data->point.x = TFT_HEIGHT - touch_y;
-                data->point.y = touch_x;
-            #elif TOUCH_ROTATION == 180
-                data->point.x = TFT_WIDTH - touch_x;
-                data->point.y = TFT_HEIGHT - touch_y;
-            #elif TOUCH_ROTATION == 270
-                data->point.x = touch_y;
-                data->point.y = TFT_WIDTH - touch_x;
-            #else
-                data->point.x = touch_x;
-                data->point.y = touch_y;
-            #endif
-            
-            data->state = LV_INDEV_STATE_PR;
-            
-            // 调试日志
-            ESP_LOGD(TAG, "Touch X: %d, Y: %d", data->point.x, data->point.y);
-        } else {
-            data->state = LV_INDEV_STATE_REL;
-        }
+    uint16_t touchX, touchY;
+    bool touched = lcd.getTouch(&touchX, &touchY);
+
+    if (touched) {
+        data->point.x = touchX;
+        data->point.y = touchY;
+        data->state = LV_INDEV_STATE_PR;
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
 }
 
 void HaDeckDevice::setup() {
-    // 设置全局设备指针
-    global_device = this;
-    
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
-    // 初始化CST816触摸屏
-    if (!touch_.begin(TOUCH_SDA, TOUCH_SCL, TOUCH_RST, TOUCH_INT)) {
-        ESP_LOGE(TAG, "CST816 touch initialization failed!");
-    } else {
-        ESP_LOGI(TAG, "CST816 touch initialized");
-    }
-
+    // Inizializza il display ILI9341 qui
     lcd.init();
 
-    lv_disp_draw_buf_init(&draw_buf, buf, NULL, TFT_HEIGHT * 20);
+    // Ridimensiona il buffer di disegno in base alla nuova risoluzione
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, TFT_HEIGHT * 10);
 
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = TFT_WIDTH;
     disp_drv.ver_res = TFT_HEIGHT;
-    disp_drv.rotated = 0;
-    disp_drv.sw_rotate = 0;
+    disp_drv.rotated = 1; // Modifica se necessario
+    disp_drv.sw_rotate = 1; // Modifica se necessario
     disp_drv.flush_cb = flush_pixels;
     disp_drv.draw_buf = &draw_buf;
     lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
@@ -106,23 +77,13 @@ void HaDeckDevice::setup() {
 
     lcd.setBrightness(brightness_);
 
-    lv_obj_t * bg_color = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(bg_color, 320, 240);
-    lv_obj_set_style_border_width(bg_color, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(bg_color, lv_color_hex(0x171717), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_parent(bg_color, lv_scr_act());
+    lv_obj_t * bg_image = lv_img_create(lv_scr_act());
+    lv_img_set_src(bg_image, &bg_240x320); // Assicurati che questa immagine sia della dimensione corretta
+    lv_obj_set_parent(bg_image, lv_scr_act());
 }
 
 void HaDeckDevice::loop() {
     lv_timer_handler();
-
-    // 定期重置触摸控制器防止卡死
-    static uint32_t last_reset = 0;
-    if (millis() - last_reset > 30000) {  // 每30秒重置一次
-        touch_.reset();
-        last_reset = millis();
-        ESP_LOGD(TAG, "Touch controller reset");
-    }
 
     unsigned long ms = millis();
     if (ms - time_ > 60000) {
@@ -141,3 +102,6 @@ void HaDeckDevice::set_brightness(uint8_t value) {
     brightness_ = value;
     lcd.setBrightness(brightness_);
 }
+
+}  // namespace hd_device
+}  // namespace esphome
