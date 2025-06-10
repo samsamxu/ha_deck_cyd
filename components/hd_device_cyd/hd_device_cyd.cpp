@@ -32,26 +32,25 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
     if (global_device) {
-        // 从ESPHome触摸屏对象获取触摸状态
-        auto touches = global_device->touch_.get_touches();
+        // 读取触摸数据
+        uint8_t gesture;
+        uint16_t touch_x, touch_y;
+        bool touched = global_device->touch_.read(&gesture, &touch_x, &touch_y);
         
-        if (!touches.empty()) {
-            // 取第一个触摸点
-            auto &touch = touches[0];
-            
+        if (touched) {
             // 坐标校准（根据实际屏幕方向调整）
             #if TOUCH_ROTATION == 90
-                data->point.x = TFT_HEIGHT - touch.y;
-                data->point.y = touch.x;
+                data->point.x = TFT_HEIGHT - touch_y;
+                data->point.y = touch_x;
             #elif TOUCH_ROTATION == 180
-                data->point.x = TFT_WIDTH - touch.x;
-                data->point.y = TFT_HEIGHT - touch.y;
+                data->point.x = TFT_WIDTH - touch_x;
+                data->point.y = TFT_HEIGHT - touch_y;
             #elif TOUCH_ROTATION == 270
-                data->point.x = touch.y;
-                data->point.y = TFT_WIDTH - touch.x;
+                data->point.x = touch_y;
+                data->point.y = TFT_WIDTH - touch_x;
             #else
-                data->point.x = touch.x;
-                data->point.y = touch.y;
+                data->point.x = touch_x;
+                data->point.y = touch_y;
             #endif
             
             data->state = LV_INDEV_STATE_PR;
@@ -73,21 +72,12 @@ void HaDeckDevice::setup() {
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
-    // 配置并初始化CST816触摸屏
-    if (TOUCH_RST >= 0) {
-        this->touch_.set_reset_pin(new GPIOPin(TOUCH_RST, OUTPUT));
+    // 初始化CST816触摸屏
+    if (!touch_.begin(TOUCH_SDA, TOUCH_SCL, TOUCH_RST, TOUCH_INT)) {
+        ESP_LOGE(TAG, "CST816 touch initialization failed!");
+    } else {
+        ESP_LOGI(TAG, "CST816 touch initialized");
     }
-    if (TOUCH_INT >= 0) {
-        this->touch_.set_interrupt_pin(new InternalGPIOPin(TOUCH_INT, INPUT_PULLUP));
-    }
-    
-    // 设置I2C总线和地址
-    this->touch_.set_i2c_bus(&Wire);
-    this->touch_.set_i2c_address(0x15); // CST816默认地址
-    
-    // 初始化触摸屏
-    this->touch_.setup();
-    ESP_LOGI(TAG, "CST816 touch initialized");
 
     lcd.init();
 
@@ -125,19 +115,11 @@ void HaDeckDevice::setup() {
 
 void HaDeckDevice::loop() {
     lv_timer_handler();
-    
-    // 更新触摸屏状态
-    this->touch_.update_touches();
 
     // 定期重置触摸控制器防止卡死
     static uint32_t last_reset = 0;
     if (millis() - last_reset > 30000) {  // 每30秒重置一次
-        if (TOUCH_RST >= 0) {
-            digitalWrite(TOUCH_RST, LOW);
-            delay(5);
-            digitalWrite(TOUCH_RST, HIGH);
-            delay(50);
-        }
+        touch_.reset();
         last_reset = millis();
         ESP_LOGD(TAG, "Touch controller reset");
     }
