@@ -32,7 +32,7 @@ LGFX::LGFX(void)
     cfg.panel_height = TFT_HEIGHT;
     cfg.offset_x = 0;
     cfg.offset_y = 0;
-    cfg.offset_rotation = 0;
+    cfg.offset_rotation = 2;
     cfg.dummy_read_pixel = 8;
     cfg.dummy_read_bits = 1;
     cfg.readable = true;
@@ -59,14 +59,13 @@ LGFX::LGFX(void)
   {
     auto cfg = _touch_instance.config();
 
-    cfg.offset_rotation = 0;
     cfg.x_min = 0;
     cfg.x_max = 239;
     cfg.y_min = 0;
     cfg.y_max = 319;
     cfg.pin_int = -1;
     cfg.bus_shared = false;
-    cfg.offset_rotation = 0;
+    cfg.offset_rotation = 2;
 
     cfg.i2c_port = 0;
     cfg.i2c_addr = 0x15;
