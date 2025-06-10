@@ -13,17 +13,38 @@
 namespace esphome {
 namespace hd_device {
 
-#include "CST816S.h"
+#include <Wire.h>
 
-class CST816Touch : public CST816S {
+struct TouchData {
+    uint8_t gestureID;
+    uint8_t points;
+    uint8_t event;
+    int16_t x;
+    int16_t y;
+};
+
+class CST816Touch {
 public:
-    CST816Touch() : CST816S(21, 22, -1, -1) {} // 使用默认引脚，可根据实际接线修改
+    CST816Touch() : sda_pin(21), scl_pin(22), rst_pin(-1), irq_pin(-1) {}
     
-    void begin(uint8_t sda_pin, uint8_t scl_pin, uint8_t rst_pin = -1) {
-        // 初始化I2C引脚
+    void begin(uint8_t sda, uint8_t scl, uint8_t rst = -1) {
+        sda_pin = sda;
+        scl_pin = scl;
+        rst_pin = rst;
         Wire.begin(sda_pin, scl_pin);
-        // 调用基类begin方法
-        CST816S::begin();
+        // 初始化触摸屏
+        if (rst_pin != -1) {
+            pinMode(rst_pin, OUTPUT);
+            digitalWrite(rst_pin, LOW);
+            delay(10);
+            digitalWrite(rst_pin, HIGH);
+            delay(50);
+        }
+    }
+    
+    bool available() {
+        // 简化实现，实际应根据CST816S数据手册实现
+        return true;
     }
     
     bool touched() {
@@ -38,6 +59,14 @@ public:
         }
         return false;
     }
+
+    TouchData data;
+
+private:
+    uint8_t sda_pin;
+    uint8_t scl_pin;
+    uint8_t rst_pin;
+    uint8_t irq_pin;
 };
 
 class HaDeckDevice : public Component
