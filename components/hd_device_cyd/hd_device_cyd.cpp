@@ -9,8 +9,8 @@ static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof
 
 // 定义CST820触摸屏配置
 #define CST820_I2C_ADDR 0x15
-#define CST820_INT_PIN 12  // 触摸中断引脚（根据实际接线修改）
-#define CST820_RST_PIN 13  // 触摸复位引脚（可选）
+#define CST820_INT_PIN 33  // 触摸中断引脚（根据实际接线修改）
+#define CST820_RST_PIN -1  // 触摸复位引脚（可选）
 
 // 触摸点坐标
 static int touch_x = 0;
