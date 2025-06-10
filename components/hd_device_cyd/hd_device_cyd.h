@@ -10,8 +10,8 @@
 
 // 定义 CST820 触摸屏的 I²C 地址和引脚
 #define CST820_I2C_ADDR 0x15
-#define CST820_INT_PIN 33  // 触摸中断引脚
-#define CST820_RST_PIN -1  // 触摸复位引脚（可选）
+#define CST820_INT_PIN 36  // 触摸中断引脚
+#define CST820_RST_PIN 33  // 触摸复位引脚（可选）
 
 namespace esphome {
 namespace hd_device {
