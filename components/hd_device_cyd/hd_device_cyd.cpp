@@ -59,7 +59,7 @@ void HaDeckDevice::setup() {
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
     // 初始化CST820触摸屏
-    this->touchscreen_ = new cst816s::CST816STouchscreen();
+    this->touchscreen_ = new cst816::CST816Touchscreen();
     
     // 获取I2C总线
     auto i2c_bus = *App.get_i2c_buses().begin();
