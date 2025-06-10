@@ -29,7 +29,7 @@ public:
 private:
     unsigned long time_ = 0;
     uint8_t brightness_ = 0;
-    CST816S touch_;  // 替换为CST816触摸对象
+    CST816Touchscreen touch_;  // 替换为CST816触摸对象
 };
 
 }  // namespace hd_device
