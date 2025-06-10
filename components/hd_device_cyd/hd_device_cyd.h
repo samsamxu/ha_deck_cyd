@@ -6,7 +6,7 @@
 #include "LGFX.h"
 #include "lvgl.h"
 // 使用 CST816 库适配 CST820 触摸屏
-#include "cst816_touchscreen.h"  // ESPhome 内置的 CST816S 组件
+#include "esphome/components/cst816/touchscreen/cst816_touchscreen.h" // ESPhome 内置的 CST816S 组件
 
 // 定义 CST820 触摸屏的 I²C 地址和引脚
 #define CST820_I2C_ADDR 0x15
