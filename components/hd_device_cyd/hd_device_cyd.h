@@ -7,7 +7,6 @@
 #include "lvgl.h"
 #include <Wire.h>
 
-// 删除XPT2046相关定义
 // 添加CST816 I2C地址
 #define CST816_I2C_ADDR 0x15
 
@@ -31,6 +30,12 @@ public:
         
         Wire.begin(sda_pin, scl_pin);
         delay(50); // 确保设备初始化完成
+        
+        // 初始化配置
+        writeByte(0x15, 0x01); // 软复位
+        delay(50);
+        writeByte(0xA1, 0x03); // 设置长按时间
+        writeByte(0xA2, 0x10); // 设置运动过滤
     }
 
     bool touched() {
@@ -82,14 +87,33 @@ private:
         }
     }
 
+    bool writeByte(uint8_t reg, uint8_t value) {
+        Wire.beginTransmission(CST816_I2C_ADDR);
+        Wire.write(reg);
+        Wire.write(value);
+        return Wire.endTransmission() == 0;
+    }
+
     bool readRegister(uint8_t reg, uint8_t *data, uint8_t len) {
         Wire.beginTransmission(CST816_I2C_ADDR);
         Wire.write(reg);
         if (Wire.endTransmission(false) != 0) return false;
         
-        Wire.requestFrom(CST816_I2C_ADDR, len);
+        // 修复重载歧义问题
+        #if defined(ARDUINO_ARCH_ESP32)
+        uint8_t received = Wire.requestFrom(CST816_I2C_ADDR, (size_t)len, true);
+        #else
+        uint8_t received = Wire.requestFrom(CST816_I2C_ADDR, len);
+        #endif
+        
+        if (received != len) return false;
+        
         for (int i = 0; i < len; i++) {
-            data[i] = Wire.read();
+            if (Wire.available()) {
+                data[i] = Wire.read();
+            } else {
+                return false;
+            }
         }
         return true;
     }
