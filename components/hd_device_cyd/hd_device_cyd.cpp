@@ -1,20 +1,22 @@
-#include "hd_device_ILI9341.h"
+#include "hd_device_cyd.h"
 
 namespace esphome {
 namespace hd_device {
 
 static const char *const TAG = "HD_DEVICE";
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 10 * sizeof(lv_color_t), MALLOC_CAP_DMA);
+static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
+
+int x = 0;
+int y = 0;
+
+//SPIClass mySpi = SPIClass(VSPI);
+//XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 
 LGFX lcd;
 
 lv_disp_t *indev_disp;
 lv_group_t *group;
-
-// Aggiorna le dimensioni del display per ILI9341
-static const uint16_t TFT_WIDTH = 320;
-static const uint16_t TFT_HEIGHT = 240;
 
 void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 {
@@ -32,13 +34,16 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
 
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    uint16_t touchX, touchY;
-    bool touched = lcd.getTouch(&touchX, &touchY);
 
-    if (touched) {
-        data->point.x = touchX;
-        data->point.y = touchY;
+    if (ts.touched()) {
+        TS_Point p = ts.getPoint();
+        x = map(p.x, 220, 3850, 1, 320);
+        y = map(p.y, 310, 3773, 1, 240);
+        data->point.x = x;
+        data->point.y = y;
         data->state = LV_INDEV_STATE_PR;
+        ESP_LOGCONFIG(TAG, "X: %d ", x);
+        ESP_LOGCONFIG(TAG, "Y: %d ", y);
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
@@ -48,18 +53,20 @@ void HaDeckDevice::setup() {
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
-    // Inizializza il display ILI9341 qui
+    mySpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
+    ts.begin(mySpi);
+    ts.setRotation(1);
+
     lcd.init();
 
-    // Ridimensiona il buffer di disegno in base alla nuova risoluzione
-    lv_disp_draw_buf_init(&draw_buf, buf, NULL, TFT_HEIGHT * 10);
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, TFT_HEIGHT * 20);
 
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = TFT_WIDTH;
     disp_drv.ver_res = TFT_HEIGHT;
-    disp_drv.rotated = 1; // Modifica se necessario
-    disp_drv.sw_rotate = 1; // Modifica se necessario
+    disp_drv.rotated = 0;
+    disp_drv.sw_rotate = 0;
     disp_drv.flush_cb = flush_pixels;
     disp_drv.draw_buf = &draw_buf;
     lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
@@ -77,9 +84,12 @@ void HaDeckDevice::setup() {
 
     lcd.setBrightness(brightness_);
 
-    lv_obj_t * bg_image = lv_img_create(lv_scr_act());
-    lv_img_set_src(bg_image, &bg_240x320); // Assicurati che questa immagine sia della dimensione corretta
-    lv_obj_set_parent(bg_image, lv_scr_act());
+    lv_obj_t * bg_color = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(bg_color, 320, 240);
+    lv_obj_set_style_border_width(bg_color, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(bg_color, lv_color_hex(0x171717), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_parent(bg_color, lv_scr_act());
+
 }
 
 void HaDeckDevice::loop() {
