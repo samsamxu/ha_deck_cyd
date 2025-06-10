@@ -63,14 +63,14 @@ LGFX::LGFX(void)
     cfg.x_max = TFT_WIDTH;
     cfg.y_min = 0;
     cfg.y_max = TFT_HEIGHT;
-    cfg.pin_int = 33;
+    cfg.pin_int = -1;
     cfg.bus_shared = false;
     cfg.offset_rotation = 0;
 
     cfg.i2c_port = 0;
     cfg.i2c_addr = 0x15;
-    cfg.pin_sda = 21;
-    cfg.pin_scl = 22;
+    cfg.pin_sda = 33;
+    cfg.pin_scl = 32;
     //cfg.freq = 2500000;
 
     _touch_instance.config(cfg);
