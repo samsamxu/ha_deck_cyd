@@ -6,7 +6,7 @@
 #include "LGFX.h"
 #include "lvgl.h"
 #include <Wire.h>  // 添加I2C支持
-#include "touchscreen.h" // 替换为CST816触摸库
+#include "cst816_touchscreen.h" // 替换为CST816触摸库
 
 // 删除XPT2046引脚定义
 // 添加CST816引脚定义
