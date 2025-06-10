@@ -25,23 +25,21 @@ LGFX::LGFX(void)
   {
     auto cfg = _panel_instance.config();
 
-    cfg.pin_cs           =    15;
-    cfg.pin_rst          =    -1;
-    cfg.pin_busy         =    -1;
-    cfg.panel_width      =   TFT_WIDTH;
-    cfg.panel_height     =   TFT_HEIGHT;
-    cfg.memory_width     =   TFT_WIDTH;
-    cfg.memory_height    =   TFT_HEIGHT;
-    cfg.offset_x         =     0;
-    cfg.offset_y         =     0;
-    cfg.offset_rotation  =     0;
-    cfg.dummy_read_pixel =     8;
-    cfg.dummy_read_bits  =     1;
-    cfg.readable         =  true;
-    cfg.invert           =  true;
-    cfg.rgb_order        = false;
-    cfg.dlen_16bit       = false;
-    cfg.bus_shared       =  true;
+    cfg.pin_cs = 15;
+    cfg.pin_rst = -1;
+    cfg.pin_busy = -1;
+    cfg.panel_width = TFT_WIDTH;
+    cfg.panel_height = TFT_HEIGHT;
+    cfg.offset_x = 0;
+    cfg.offset_y = 0;
+    cfg.offset_rotation = 0;
+    cfg.dummy_read_pixel = 8;
+    cfg.dummy_read_bits = 1;
+    cfg.readable = true;
+    cfg.invert = true;
+    cfg.rgb_order = false;
+    cfg.dlen_16bit = false;
+    cfg.bus_shared = true;
 
     _panel_instance.config(cfg);
   }
@@ -49,7 +47,7 @@ LGFX::LGFX(void)
   {
     auto cfg = _light_instance.config();
 
-    cfg.pin_bl = 21;
+    cfg.pin_bl = 27;
     cfg.invert = false;
     cfg.freq = 44100;
     cfg.pwm_channel = 7;
@@ -58,6 +56,26 @@ LGFX::LGFX(void)
     _panel_instance.setLight(&_light_instance);
   }
 
+  {
+    auto cfg = _touch_instance.config();
+
+    cfg.x_min = 0;
+    cfg.x_max = 239;
+    cfg.y_min = 0;
+    cfg.y_max = 319;
+    cfg.pin_int = 33;
+    cfg.bus_shared = true;
+    cfg.offset_rotation = 0;
+
+    cfg.i2c_port = 1;
+    cfg.i2c_addr = 0x15;
+    cfg.pin_sda = 21;
+    cfg.pin_scl = 22;
+    cfg.freq = 400000;
+
+    _touch_instance.config(cfg);
+    _panel_instance.setTouch(&_touch_instance);
+  }
   setPanel(&_panel_instance);
 }
 
