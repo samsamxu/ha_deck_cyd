@@ -7,11 +7,12 @@ static const char *const TAG = "HD_DEVICE";
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
 
+// 声明全局设备指针
+static HaDeckDevice *global_device = nullptr;
+
 int x = 0;
 int y = 0;
 
-// 删除XPT2046 SPI相关代码
-// 添加CST816触摸支持
 LGFX lcd;
 
 lv_disp_t *indev_disp;
@@ -33,9 +34,8 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
 
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    // 使用CST816触摸驱动替代XPT2046
-    if (this->touch.touched()) {
-        if (this->touch.getTouch(&x, &y)) {
+    if (global_device && global_device->touch.touched()) {
+        if (global_device->touch.getTouch(&x, &y)) {
             data->point.x = x;
             data->point.y = y;
             data->state = LV_INDEV_STATE_PR;
@@ -50,6 +50,9 @@ void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
 }
 
 void HaDeckDevice::setup() {
+    // 设置全局设备指针
+    global_device = this;
+    
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
