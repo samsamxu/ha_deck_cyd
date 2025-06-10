@@ -57,7 +57,7 @@ void HaDeckDevice::setup() {
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
     // 初始化CST816触摸屏 (使用实际引脚)
-    touch.begin(RISING); // 使用RISING中断触发
+    touch.begin(21, 22, -1); // SDA, SCL引脚（根据实际接线修改），不使用RST引脚
 
     lcd.init();
 
