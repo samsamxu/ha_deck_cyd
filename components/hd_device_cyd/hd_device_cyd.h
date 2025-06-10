@@ -20,8 +20,10 @@ public:
     CST816Touch() : CST816S(21, 22, -1, -1) {} // 使用默认引脚，可根据实际接线修改
     
     void begin(uint8_t sda_pin, uint8_t scl_pin, uint8_t rst_pin = -1) {
-        // 使用CST816S的begin方法
-        CST816S::begin(RISING);
+        // 初始化I2C引脚
+        Wire.begin(sda_pin, scl_pin);
+        // 调用基类begin方法
+        CST816S::begin();
     }
     
     bool touched() {
