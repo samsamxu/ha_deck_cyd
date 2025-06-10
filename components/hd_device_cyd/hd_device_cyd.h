@@ -10,7 +10,7 @@
 // CST816触摸屏引脚定义
 #define TOUCH_SDA 21    // I2C SDA引脚
 #define TOUCH_SCL 22    // I2C SCL引脚
-#define TOUCH_RST 33    // 复位引脚（-1表示不使用）
+#define TOUCH_RST -1    // 复位引脚（-1表示不使用）
 #define TOUCH_INT -1    // 中断引脚（-1表示不使用）
 #define TOUCH_ROTATION 0 // 触摸旋转角度 (0, 90, 180, 270)
 
@@ -18,6 +18,9 @@ namespace esphome {
 namespace hd_device {
 
 static const char *const TAG = "HD_DEVICE";
+
+// 前向声明类
+class HaDeckDevice;
 
 // 声明全局设备指针
 extern HaDeckDevice *global_device;
@@ -31,8 +34,7 @@ public:
     uint8_t get_brightness();
     void set_brightness(uint8_t value);
     
-    // 使用ESPHome自带的CST816触摸对象
-    cst816::CST816Touchscreen touch_;
+    CST816S touch_;  // 使用正确的类型名 CST816S
     
 private:
     unsigned long time_ = 0;
