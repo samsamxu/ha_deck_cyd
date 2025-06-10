@@ -10,8 +10,8 @@ static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof
 // 声明全局设备指针
 static HaDeckDevice *global_device = nullptr;
 
-int x = 0;
-int y = 0;
+int16_t x = 0;
+int16_t y = 0;
 
 LGFX lcd;
 
