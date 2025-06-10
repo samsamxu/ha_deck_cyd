@@ -14,6 +14,8 @@ class LGFX : public lgfx::LGFX_Device
   lgfx::Panel_ILI9342     _panel_instance;
   lgfx::Bus_SPI        _bus_instance;
   lgfx::Light_PWM     _light_instance;
+  lgfx::Touch_CST816S _touch_instance;
+
 
 public:
   LGFX(void);
