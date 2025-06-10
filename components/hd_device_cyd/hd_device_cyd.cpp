@@ -1,14 +1,10 @@
 #include "hd_device_cyd.h"
 
-namespace esphome {
-namespace hd_device {
+// 定义全局设备指针
+HaDeckDevice *global_device = nullptr;
 
-static const char *const TAG = "HD_DEVICE";
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
-
-// 声明全局设备指针
-static HaDeckDevice *global_device = nullptr;
 
 int16_t x = 0;
 int16_t y = 0;
@@ -36,32 +32,26 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
     if (global_device) {
-        // 读取触摸数据
-        uint8_t gesture;
-        uint16_t touch_x, touch_y;
-        bool touched = global_device->touch_.read(&gesture, &touch_x, &touch_y);
+        // 从ESPHome触摸屏对象获取触摸状态
+        auto touches = global_device->touch_.get_touches();
         
-        if (touched) {
+        if (!touches.empty()) {
+            // 取第一个触摸点
+            auto &touch = touches[0];
+            
             // 坐标校准（根据实际屏幕方向调整）
-            // 注意：CST816返回的坐标可能需要根据屏幕旋转进行转换
-            #ifdef TOUCH_ROTATION
-            if (TOUCH_ROTATION == 90) {
-                data->point.x = TFT_HEIGHT - touch_y;
-                data->point.y = touch_x;
-            } else if (TOUCH_ROTATION == 180) {
-                data->point.x = TFT_WIDTH - touch_x;
-                data->point.y = TFT_HEIGHT - touch_y;
-            } else if (TOUCH_ROTATION == 270) {
-                data->point.x = touch_y;
-                data->point.y = TFT_WIDTH - touch_x;
-            } else {
-                data->point.x = touch_x;
-                data->point.y = touch_y;
-            }
+            #if TOUCH_ROTATION == 90
+                data->point.x = TFT_HEIGHT - touch.y;
+                data->point.y = touch.x;
+            #elif TOUCH_ROTATION == 180
+                data->point.x = TFT_WIDTH - touch.x;
+                data->point.y = TFT_HEIGHT - touch.y;
+            #elif TOUCH_ROTATION == 270
+                data->point.x = touch.y;
+                data->point.y = TFT_WIDTH - touch.x;
             #else
-            // 默认不旋转
-            data->point.x = touch_x;
-            data->point.y = touch_y;
+                data->point.x = touch.x;
+                data->point.y = touch.y;
             #endif
             
             data->state = LV_INDEV_STATE_PR;
@@ -83,11 +73,21 @@ void HaDeckDevice::setup() {
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
-    // 初始化CST816触摸屏 (使用实际引脚)
-    // 参数：SDA, SCL, RST, IRQ引脚（-1表示不使用）
-    touch_.begin(TOUCH_SDA, TOUCH_SCL, TOUCH_RST, TOUCH_INT);
-    touch_.setAutoSleep(false);  // 禁用自动睡眠
-    touch_.setAutoReset(true);   // 启用自动复位
+    // 配置并初始化CST816触摸屏
+    if (TOUCH_RST >= 0) {
+        this->touch_.set_reset_pin(new GPIOPin(TOUCH_RST, OUTPUT));
+    }
+    if (TOUCH_INT >= 0) {
+        this->touch_.set_interrupt_pin(new InternalGPIOPin(TOUCH_INT, INPUT_PULLUP));
+    }
+    
+    // 设置I2C总线和地址
+    this->touch_.set_i2c_bus(&Wire);
+    this->touch_.set_i2c_address(0x15); // CST816默认地址
+    
+    // 初始化触摸屏
+    this->touch_.setup();
+    ESP_LOGI(TAG, "CST816 touch initialized");
 
     lcd.init();
 
@@ -108,7 +108,7 @@ void HaDeckDevice::setup() {
     indev_drv.type = LV_INDEV_TYPE_POINTER;
     indev_drv.long_press_time = 1000;
     indev_drv.long_press_repeat_time = 300;
-    indev_drv.read_cb = touchpad_read;  // 使用修改后的触摸读取函数
+    indev_drv.read_cb = touchpad_read;
     lv_indev_drv_register(&indev_drv);
 
     group = lv_group_create();
@@ -125,12 +125,21 @@ void HaDeckDevice::setup() {
 
 void HaDeckDevice::loop() {
     lv_timer_handler();
+    
+    // 更新触摸屏状态
+    this->touch_.update_touches();
 
-    // 可选：定期重置触摸控制器防止卡死
+    // 定期重置触摸控制器防止卡死
     static uint32_t last_reset = 0;
     if (millis() - last_reset > 30000) {  // 每30秒重置一次
-        touch_.reset();
+        if (TOUCH_RST >= 0) {
+            digitalWrite(TOUCH_RST, LOW);
+            delay(5);
+            digitalWrite(TOUCH_RST, HIGH);
+            delay(50);
+        }
         last_reset = millis();
+        ESP_LOGD(TAG, "Touch controller reset");
     }
 
     unsigned long ms = millis();
@@ -150,6 +159,3 @@ void HaDeckDevice::set_brightness(uint8_t value) {
     brightness_ = value;
     lcd.setBrightness(brightness_);
 }
-
-}  // namespace hd_device
-}  // namespace esphome
