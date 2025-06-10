@@ -5,7 +5,7 @@
 #include "esphome/core/log.h"
 #include "LGFX.h"
 #include "lvgl.h"
-#include "cst816_touchscreen.h"  // 使用ESPHome自带的CST816驱动
+#include "esphome/components/cst816/touchscreen/cst816_touchscreen.h"  // 使用ESPHome自带的CST816驱动
 
 // CST816触摸屏引脚定义
 #define TOUCH_SDA 21    // I2C SDA引脚
