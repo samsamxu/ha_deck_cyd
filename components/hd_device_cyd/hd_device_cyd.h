@@ -28,7 +28,7 @@ private:
     unsigned long time_ = 0;
     uint8_t brightness_ = 0;
     // 添加 CST816S 触摸屏对象（用于适配 CST820）
-    cst816s::CST816STouchscreen *touchscreen_ = nullptr;
+    cst816::CST816Touchscreen *touchscreen_ = nullptr;
 };
 
 }  // namespace hd_device
