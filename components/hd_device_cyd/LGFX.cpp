@@ -59,12 +59,14 @@ LGFX::LGFX(void)
   {
     auto cfg = _touch_instance.config();
 
+    cfg.offset_rotation = 0;
     cfg.x_min = 0;
-    cfg.x_max = TFT_WIDTH;
+    cfg.x_max = 239;
     cfg.y_min = 0;
-    cfg.y_max = TFT_HEIGHT;
+    cfg.y_max = 319;
     cfg.pin_int = -1;
     cfg.bus_shared = false;
+    cfg.offset_rotation = 0;
 
     cfg.i2c_port = 0;
     cfg.i2c_addr = 0x15;
