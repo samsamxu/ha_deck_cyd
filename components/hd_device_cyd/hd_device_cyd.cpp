@@ -34,14 +34,14 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
 
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    if (global_device && global_device->touch.touched()) {
-        if (global_device->touch.getTouch(&x, &y)) {
-            data->point.x = x;
-            data->point.y = y;
+    if (global_device && global_device->touch.available()) {
+        if (global_device->touch.data.event == 0) { // Down event
+            data->point.x = global_device->touch.data.x;
+            data->point.y = global_device->touch.data.y;
             data->state = LV_INDEV_STATE_PR;
-            ESP_LOGCONFIG(TAG, "X: %d ", x);
-            ESP_LOGCONFIG(TAG, "Y: %d ", y);
-        } else {
+            ESP_LOGCONFIG(TAG, "X: %d ", data->point.x);
+            ESP_LOGCONFIG(TAG, "Y: %d ", data->point.y);
+        } else if (global_device->touch.data.event == 1) { // Up event
             data->state = LV_INDEV_STATE_REL;
         }
     } else {
@@ -57,8 +57,7 @@ void HaDeckDevice::setup() {
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
     // 初始化CST816触摸屏 (使用实际引脚)
-    touch.begin(21, 22); // SDA, SCL引脚（根据实际接线修改）
-    touch.setRotation(1); // 设置旋转方向（保持与之前一致）
+    touch.begin(RISING); // 使用RISING中断触发
 
     lcd.init();
 
