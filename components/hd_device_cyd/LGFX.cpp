@@ -66,6 +66,8 @@ LGFX::LGFX(void)
     cfg.pin_int = -1;
     cfg.bus_shared = false;
     cfg.offset_rotation = 2;
+    cfg.x_invert = true;   // 水平翻转
+    cfg.y_invert = true;   // 垂直翻转
 
     cfg.i2c_port = 0;
     cfg.i2c_addr = 0x15;
