@@ -32,16 +32,43 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
     lv_disp_flush_ready(disp);
 }
 
+// 修改触摸读取函数适配CST816
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    if (global_device && global_device->touch.available()) {
-        if (global_device->touch.data.event == 0) { // Down event
-            data->point.x = global_device->touch.data.x;
-            data->point.y = global_device->touch.data.y;
+    if (global_device) {
+        // 读取触摸数据
+        uint8_t gesture;
+        uint16_t touch_x, touch_y;
+        bool touched = global_device->touch_.read(&gesture, &touch_x, &touch_y);
+        
+        if (touched) {
+            // 坐标校准（根据实际屏幕方向调整）
+            // 注意：CST816返回的坐标可能需要根据屏幕旋转进行转换
+            #ifdef TOUCH_ROTATION
+            if (TOUCH_ROTATION == 90) {
+                data->point.x = TFT_HEIGHT - touch_y;
+                data->point.y = touch_x;
+            } else if (TOUCH_ROTATION == 180) {
+                data->point.x = TFT_WIDTH - touch_x;
+                data->point.y = TFT_HEIGHT - touch_y;
+            } else if (TOUCH_ROTATION == 270) {
+                data->point.x = touch_y;
+                data->point.y = TFT_WIDTH - touch_x;
+            } else {
+                data->point.x = touch_x;
+                data->point.y = touch_y;
+            }
+            #else
+            // 默认不旋转
+            data->point.x = touch_x;
+            data->point.y = touch_y;
+            #endif
+            
             data->state = LV_INDEV_STATE_PR;
-            ESP_LOGCONFIG(TAG, "X: %d ", data->point.x);
-            ESP_LOGCONFIG(TAG, "Y: %d ", data->point.y);
-        } else if (global_device->touch.data.event == 1) { // Up event
+            
+            // 调试日志
+            ESP_LOGD(TAG, "Touch X: %d, Y: %d", data->point.x, data->point.y);
+        } else {
             data->state = LV_INDEV_STATE_REL;
         }
     } else {
@@ -57,7 +84,10 @@ void HaDeckDevice::setup() {
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
     // 初始化CST816触摸屏 (使用实际引脚)
-    touch.begin(21, 22, -1); // SDA, SCL引脚（根据实际接线修改），不使用RST引脚
+    // 参数：SDA, SCL, RST, IRQ引脚（-1表示不使用）
+    touch_.begin(TOUCH_SDA, TOUCH_SCL, TOUCH_RST, TOUCH_INT);
+    touch_.setAutoSleep(false);  // 禁用自动睡眠
+    touch_.setAutoReset(true);   // 启用自动复位
 
     lcd.init();
 
@@ -78,7 +108,7 @@ void HaDeckDevice::setup() {
     indev_drv.type = LV_INDEV_TYPE_POINTER;
     indev_drv.long_press_time = 1000;
     indev_drv.long_press_repeat_time = 300;
-    indev_drv.read_cb = touchpad_read;
+    indev_drv.read_cb = touchpad_read;  // 使用修改后的触摸读取函数
     lv_indev_drv_register(&indev_drv);
 
     group = lv_group_create();
@@ -95,6 +125,13 @@ void HaDeckDevice::setup() {
 
 void HaDeckDevice::loop() {
     lv_timer_handler();
+
+    // 可选：定期重置触摸控制器防止卡死
+    static uint32_t last_reset = 0;
+    if (millis() - last_reset > 30000) {  // 每30秒重置一次
+        touch_.reset();
+        last_reset = millis();
+    }
 
     unsigned long ms = millis();
     if (ms - time_ > 60000) {
