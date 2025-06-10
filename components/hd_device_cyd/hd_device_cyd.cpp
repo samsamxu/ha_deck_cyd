@@ -1,7 +1,3 @@
-
-
-
-
 #include "hd_device_cyd.h"
 
 namespace esphome {
