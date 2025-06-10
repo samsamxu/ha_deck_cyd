@@ -34,7 +34,7 @@ public:
     uint8_t get_brightness();
     void set_brightness(uint8_t value);
     
-    CST816S touch_;  // 使用正确的类型名 CST816S
+    cst816::CST816Touchscreen touch_;  // 使用正确的类型名 CST816S
     
 private:
     unsigned long time_ = 0;
