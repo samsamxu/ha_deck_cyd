@@ -69,9 +69,9 @@ LGFX::LGFX(void)
 
     cfg.i2c_port = 1;
     cfg.i2c_addr = 0x15;
-    cfg.pin_sda = 21;
-    cfg.pin_scl = 22;
-    cfg.freq = 400000;
+    cfg.pin_sda = 33;
+    cfg.pin_scl = 32;
+    cfg.freq = 2500000;
 
     _touch_instance.config(cfg);
     _panel_instance.setTouch(&_touch_instance);
