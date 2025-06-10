@@ -16,8 +16,8 @@ bool touched = false;
 //XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 // 定义CST820触摸屏配置
 #define CST820_I2C_ADDR 0x15
-#define CST820_INT_PIN 12  // 触摸中断引脚（根据实际接线修改）
-#define CST820_RST_PIN 13  // 触摸复位引脚（可选）
+#define CST820_INT_PIN 36  // 触摸中断引脚（根据实际接线修改）
+#define CST820_RST_PIN 33  // 触摸复位引脚（可选）
 
 LGFX lcd;
 
