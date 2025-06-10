@@ -7,17 +7,13 @@ static const char *const TAG = "HD_DEVICE";
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t *buf = (lv_color_t *)heap_caps_malloc(TFT_HEIGHT * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
 
-// 定义CST820触摸屏配置
-#define CST820_I2C_ADDR 0x15
-#define CST820_INT_PIN 33  // 触摸中断引脚（根据实际接线修改）
-#define CST820_RST_PIN -1  // 触摸复位引脚（可选）
+int x = 0;
+int y = 0;
 
-// 触摸点坐标
-static int touch_x = 0;
-static int touch_y = 0;
-static bool touched = false;
-
+// 删除XPT2046 SPI相关代码
+// 添加CST816触摸支持
 LGFX lcd;
+
 lv_disp_t *indev_disp;
 lv_group_t *group;
 
@@ -27,28 +23,27 @@ void IRAM_ATTR flush_pixels(lv_disp_drv_t *disp, const lv_area_t *area, lv_color
     uint32_t h = (area->y2 - area->y1 + 1);
     uint32_t len = w * h;
 
-    lcd.startWrite();
-    lcd.setAddrWindow(area->x1, area->y1, w, h);
+    lcd.startWrite();                            /* Start new TFT transaction */
+    lcd.setAddrWindow(area->x1, area->y1, w, h); /* set the working window */
     lcd.writePixels((uint16_t *)&color_p->full, len, true);
-    lcd.endWrite();
+    lcd.endWrite();                              /* terminate TFT transaction */
 
     lv_disp_flush_ready(disp);
 }
 
-// 触摸回调函数
-static void touch_callback(int16_t x, int16_t y) {
-    touch_x = x;
-    touch_y = y;
-    touched = true;
-}
-
 void IRAM_ATTR touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    if (touched) {
-        data->point.x = touch_x;
-        data->point.y = touch_y;
-        data->state = LV_INDEV_STATE_PR;
-        touched = false;
+    // 使用CST816触摸驱动替代XPT2046
+    if (this->touch.touched()) {
+        if (this->touch.getTouch(&x, &y)) {
+            data->point.x = x;
+            data->point.y = y;
+            data->state = LV_INDEV_STATE_PR;
+            ESP_LOGCONFIG(TAG, "X: %d ", x);
+            ESP_LOGCONFIG(TAG, "Y: %d ", y);
+        } else {
+            data->state = LV_INDEV_STATE_REL;
+        }
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
@@ -58,33 +53,10 @@ void HaDeckDevice::setup() {
     lv_init();
     lv_theme_default_init(NULL, lv_color_hex(0xFFEB3B), lv_color_hex(0xFF7043), 1, LV_FONT_DEFAULT);
 
-    // 初始化CST820触摸屏
-    this->touchscreen_ = new cst816::CST816Touchscreen();
-    
-    // 获取I2C总线
-    auto i2c_bus = *App.get_i2c_buses().begin();
-    
-    // 配置触摸屏参数
-    this->touchscreen_->set_i2c_bus(i2c_bus);
-    this->touchscreen_->set_i2c_address(CST820_I2C_ADDR);
-    
-    // 使用GPIOOutputPin而不是GPIOPin
-    this->touchscreen_->set_interrupt_pin(new GPIOPin(CST820_INT_PIN, INPUT_PULLUP));
-    
-    // 可选：配置复位引脚
-    if (CST820_RST_PIN != -1) {
-        this->touchscreen_->set_reset_pin(new GPIOPin(CST820_RST_PIN, OUTPUT));
-    }
-    
-    // 设置触摸回调函数
-    this->touchscreen_->register_touch_listener([=](int16_t x, int16_t y) {
-        touch_callback(x, y);
-    });
-    
-    // 初始化触摸屏
-    this->touchscreen_->setup();
+    // 初始化CST816触摸屏 (使用实际引脚)
+    touch.begin(21, 22); // SDA, SCL引脚（根据实际接线修改）
+    touch.setRotation(1); // 设置旋转方向（保持与之前一致）
 
-    // 初始化显示屏
     lcd.init();
 
     lv_disp_draw_buf_init(&draw_buf, buf, NULL, TFT_HEIGHT * 20);
@@ -111,18 +83,17 @@ void HaDeckDevice::setup() {
     lv_group_set_default(group);
 
     lcd.setBrightness(brightness_);
+
+    lv_obj_t * bg_color = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(bg_color, 320, 240);
+    lv_obj_set_style_border_width(bg_color, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(bg_color, lv_color_hex(0x171717), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_parent(bg_color, lv_scr_act());
 }
 
 void HaDeckDevice::loop() {
-    // 处理触摸屏事件
-    if (this->touchscreen_) {
-        this->touchscreen_->loop();
-    }
-    
-    // 处理LVGL任务
     lv_timer_handler();
 
-    // 定期日志
     unsigned long ms = millis();
     if (ms - time_ > 60000) {
         time_ = ms;
