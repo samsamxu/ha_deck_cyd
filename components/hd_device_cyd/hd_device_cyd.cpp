@@ -1,5 +1,4 @@
 #include "hd_device_cyd.h"
-#include "cst816_touchscreen.h"  // 添加CST816S触摸库
 
 namespace esphome {
 namespace hd_device {
