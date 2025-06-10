@@ -6,12 +6,12 @@
 #include "LGFX.h"
 #include "lvgl.h"
 // 使用 CST816 库适配 CST820 触摸屏
-#include "esphome/components/cst816/touchscreen/cst816_touchscreen.h" // ESPhome 内置的 CST816S 组件
+#include "esphome/components/cst816/touchscreen/cst816_touchscreen.h"  // ESPhome 内置的 CST816S 组件
 
 // 定义 CST820 触摸屏的 I²C 地址和引脚
 #define CST820_I2C_ADDR 0x15
-#define CST820_INT_PIN 36  // 触摸中断引脚
-#define CST820_RST_PIN 33  // 触摸复位引脚（可选）
+#define CST820_INT_PIN 33  // 触摸中断引脚
+#define CST820_RST_PIN -1  // 触摸复位引脚（可选）
 
 namespace esphome {
 namespace hd_device {
@@ -27,8 +27,8 @@ public:
 private:
     unsigned long time_ = 0;
     uint8_t brightness_ = 0;
-    // 添加触摸屏成员变量
-    CST816STouchscreen *touchscreen_ = nullptr;
+    // 添加 CST816S 触摸屏对象（用于适配 CST820）
+    cst816s::CST816STouchscreen *touchscreen_ = nullptr;
 };
 
 }  // namespace hd_device
