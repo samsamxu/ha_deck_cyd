@@ -67,11 +67,11 @@ LGFX::LGFX(void)
     cfg.bus_shared = true;
     cfg.offset_rotation = 0;
 
-    cfg.i2c_port = 0;
-    cfg.i2c_addr = 0x15;
-    cfg.pin_sda = 21;
-    cfg.pin_scl = 22;
-    cfg.freq = 2500000;
+    //cfg.i2c_port = 0;
+    //cfg.i2c_addr = 0x15;
+    //cfg.pin_sda = 21;
+    //cfg.pin_scl = 22;
+    //cfg.freq = 2500000;
 
     _touch_instance.config(cfg);
     _panel_instance.setTouch(&_touch_instance);
